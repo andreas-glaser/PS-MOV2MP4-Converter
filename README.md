@@ -1,4 +1,3 @@
-```markdown
 # PS-MOV2MP4-Converter
 
 A PowerShell script to convert MOV files to MP4 using ffmpeg—with customizable settings, automatic file renaming, optional trash bin support, and optional logging.
@@ -106,4 +105,3 @@ Run the script using the following syntax:
 ## License
 
 This project is licensed under the MIT License. See the [LICENSE](LICENSE) file for details.
-```
