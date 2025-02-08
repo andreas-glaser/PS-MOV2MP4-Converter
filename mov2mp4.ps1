@@ -4,9 +4,13 @@ param (
 
     [switch]$Recurse,
 
-    # If specified, the original file is moved to the Recycle Bin;
-    # otherwise (default), the original file is kept in place.
+    # If specified, the original file is moved to the Recycle Bin after conversion;
+    # otherwise, the original file is kept in place.
     [switch]$MoveToTrash,
+
+    # If specified, logging is enabled. Log files (conversion.log and conversion_errors.log)
+    # are written to the same directory as the script.
+    [switch]$EnableLogging,
 
     [string]$InputExtension = "*.mov",
     [string]$VideoCodec     = "libx265",
@@ -25,6 +29,7 @@ $parametersMessage = @"
 Target Directory : $TargetDirectory
 Recurse          : $Recurse
 Move To Trash    : $MoveToTrash
+Enable Logging   : $EnableLogging
 Input Extension  : $InputExtension
 Video Codec      : $VideoCodec
 CRF              : $CRF
@@ -45,9 +50,15 @@ if ($confirmation -notmatch '^[Yy]$') {
     exit
 }
 
-# Define log file paths (placed in the target directory).
-$logFile = Join-Path $TargetDirectory "conversion.log"
-$errorLogFile = Join-Path $TargetDirectory "conversion_errors.log"
+# If logging is enabled, define log file paths in the script directory; otherwise, leave as $null.
+if ($EnableLogging) {
+    $logFile = Join-Path $PSScriptRoot "conversion.log"
+    $errorLogFile = Join-Path $PSScriptRoot "conversion_errors.log"
+}
+else {
+    $logFile = $null
+    $errorLogFile = $null
+}
 
 # Build the file list.
 if ($Recurse) {
@@ -104,14 +115,18 @@ foreach ($file in $fileList) {
     # Execute ffmpeg conversion.
     $ffmpegOutput = & ffmpeg @arguments 2>&1
 
-    # Append ffmpeg output to the conversion log.
-    Add-Content -Path $logFile -Value $ffmpegOutput
+    # If logging is enabled, append ffmpeg output to the conversion log.
+    if ($EnableLogging -and $logFile) {
+        Add-Content -Path $logFile -Value $ffmpegOutput
+    }
 
     # Check if ffmpeg failed.
     if ($LASTEXITCODE -ne 0) {
         $errorMessage = "$($file.FullName) - Error: ffmpeg conversion failed with exit code $LASTEXITCODE"
         Write-Host "Error converting $($file.FullName): $errorMessage" -ForegroundColor Red
-        Add-Content -Path $errorLogFile -Value $errorMessage
+        if ($EnableLogging -and $errorLogFile) {
+            Add-Content -Path $errorLogFile -Value $errorMessage
+        }
     }
     else {
         Write-Host "Finished conversion: $($file.FullName) -> $outputFile" -ForegroundColor Green
